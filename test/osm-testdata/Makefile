@@ -30,7 +30,7 @@ LIB_BZIP2  := -lbz2
 
 LIB_IO     := $(LIB_EXPAT) $(LIB_PBF) $(LIB_GZIP) $(LIB_BZIP2)
 
-LIB_OGR    := $(shell gdal-config --libs)
+LIB_OGR    := $(shell gdal-config --libs) $(shell gdal-config --dep-libs)
 
 # place where the test data directory has been cloned
 # https://github.com/osmcode/osm-testdata

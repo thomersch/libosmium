@@ -37,7 +37,7 @@ LIB_BZIP2  := -lbz2
 LIB_IO     := $(LIB_EXPAT) $(LIB_PBF) $(LIB_GZIP) $(LIB_BZIP2)
 
 LIB_GEOS   := $(shell geos-config --libs)
-LIB_OGR    := $(shell gdal-config --libs)
+LIB_OGR    := $(shell gdal-config --libs) $(shell gdal-config --dep-libs)
 LIB_SHAPE  := -lshp $(LIB_GEOS)
 LIB_PRGOPT := -lboost_program_options
 
