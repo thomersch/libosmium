@@ -5,6 +5,7 @@ compiler:
  - clang
 
 before_install:
+ - CUR_DIR=$(pwd)
  - git clone --depth=1 https://github.com/mapnik/mapnik-packaging.git mapnik-packaging
  - cd mapnik-packaging && source build.sh
 
@@ -12,6 +13,7 @@ install:
  - build_osmium
 
 before_script:
+ - cd ${CUR_DIR}
  - make test
 
 script:
