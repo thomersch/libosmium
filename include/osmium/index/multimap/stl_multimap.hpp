@@ -3,7 +3,7 @@
 
 /*
 
-This file is part of Osmium (http://osmcode.org/osmium).
+This file is part of Osmium (http://osmcode.org/libosmium).
 
 Copyright 2013 Jochen Topf <jochen@topf.org> and others (see README).
 
@@ -81,11 +81,11 @@ namespace osmium {
                 ~StlMultimap() noexcept override final = default;
 
                 void unsorted_set(const TKey key, const TValue value) {
-                    m_elements.insert(std::make_pair(key, value));
+                    m_elements.emplace(key, value);
                 }
 
                 void set(const TKey key, const TValue value) override final {
-                    m_elements.insert(std::make_pair(key, value));
+                    m_elements.emplace(key, value);
                 }
 
                 std::pair<iterator, iterator> get_all(const TKey key) {
@@ -133,7 +133,7 @@ namespace osmium {
                 void dump_as_list(const int fd) const {
                     std::vector<element_type> v;
                     for (const auto& element : m_elements) {
-                        v.push_back(element_type(element.first, element.second));
+                        v.emplace_back(element.first, element.second);
                     }
 //                    std::copy(m_elements.cbegin(), m_elements.cend(), std::back_inserter(v));
                     std::sort(v.begin(), v.end());

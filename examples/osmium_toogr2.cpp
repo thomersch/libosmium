@@ -293,10 +293,9 @@ int main(int argc, char* argv[]) {
         input_filename = "-";
     }
 
-    typedef osmium::area::Assembler area_assembler_type;
-    area_assembler_type assembler;
-    assembler.enable_debug_output(debug);
-    osmium::area::Collector<area_assembler_type> collector(assembler);
+    osmium::area::Assembler::config_type assembler_config;
+    assembler_config.enable_debug_output(debug);
+    osmium::area::Collector<osmium::area::Assembler> collector(assembler_config);
 
     std::cerr << "Pass 1...\n";
     osmium::io::Reader reader1(input_filename);
@@ -312,11 +311,13 @@ int main(int argc, char* argv[]) {
 
     std::cerr << "Pass 2...\n";
     osmium::io::Reader reader2(input_filename);
-    osmium::apply(reader2, location_handler, ogr_handler, collector.handler());
+
+    osmium::apply(reader2, location_handler, ogr_handler, collector.handler([&ogr_handler](const osmium::memory::Buffer& area_buffer) {
+        osmium::apply(area_buffer, ogr_handler);
+    }));
+
     reader2.close();
     std::cerr << "Pass 2 done\n";
-
-    osmium::apply(collector, ogr_handler);
 
     google::protobuf::ShutdownProtobufLibrary();
 }

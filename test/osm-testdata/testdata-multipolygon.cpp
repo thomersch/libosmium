@@ -59,7 +59,7 @@ class TestHandler : public osmium::handler::Handler {
 
     std::ofstream m_out;
 
-    bool m_first_out{true};
+    bool m_first_out {true};
 
 public:
 
@@ -310,11 +310,10 @@ int main(int argc, char* argv[]) {
 
     OGRDataSource* data_source = initialize_database(output_format, output_filename);
 
-    typedef osmium::area::Assembler area_assembler_type;
     osmium::area::ProblemReporterOGR problem_reporter(data_source);
-    area_assembler_type assembler(&problem_reporter);
-    assembler.enable_debug_output();
-    osmium::area::Collector<area_assembler_type> collector(assembler);
+    osmium::area::Assembler::config_type assembler_config(&problem_reporter);
+    assembler_config.enable_debug_output();
+    osmium::area::Collector<osmium::area::Assembler> collector(assembler_config);
 
     std::cerr << "Pass 1...\n";
     osmium::io::Reader reader1(input_filename);
@@ -326,15 +325,15 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(index_pos, index_neg);
     location_handler.ignore_errors();
 
-    TestHandler ogr_handler(data_source);
+    TestHandler test_handler(data_source);
 
     std::cerr << "Pass 2...\n";
     osmium::io::Reader reader2(input_filename);
-    osmium::apply(reader2, location_handler, ogr_handler, collector.handler());
+    osmium::apply(reader2, location_handler, test_handler, collector.handler([&test_handler](const osmium::memory::Buffer& area_buffer) {
+        osmium::apply(area_buffer, test_handler);
+    }));
     reader2.close();
     std::cerr << "Pass 2 done\n";
-
-    osmium::apply(collector, ogr_handler);
 
     OGRDataSource::DestroyDataSource(data_source);
     OGRCleanupAll();

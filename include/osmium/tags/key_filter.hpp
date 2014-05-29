@@ -3,7 +3,7 @@
 
 /*
 
-This file is part of Osmium (http://osmcode.org/osmium).
+This file is part of Osmium (http://osmcode.org/libosmium).
 
 Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
 
@@ -70,7 +70,7 @@ namespace osmium {
             }
 
             KeyFilter& add(bool result, const char* key) {
-                m_rules.emplace_back(Rule(result, key));
+                m_rules.emplace_back(result, key);
                 return *this;
             }
 

@@ -3,9 +3,9 @@
 
 /*
 
-This file is part of Osmium (http://osmcode.org/osmium).
+This file is part of Osmium (http://osmcode.org/libosmium).
 
-Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
+Copyright 2014 Jochen Topf <jochen@topf.org> and others (see README).
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -41,7 +41,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include <osmium/osm/noderef.hpp>
 #include <osmium/osm/ostream.hpp>
-#include <osmium/area/segment.hpp>
+#include <osmium/area/detail/node_ref_segment.hpp>
 
 namespace osmium {
 
@@ -56,7 +56,7 @@ namespace osmium {
 
             public:
 
-                typedef std::vector<osmium::area::NodeRefSegment> segments_type;
+                typedef std::vector<NodeRefSegment> segments_type;
 
             private:
 
@@ -72,7 +72,7 @@ namespace osmium {
 
                 ProtoRing(const NodeRefSegment& segment) :
                     m_segments() {
-                    add_segment_end(segment);
+                    add_segment_back(segment);
                 }
 
                 ProtoRing(segments_type::const_iterator sbegin, segments_type::const_iterator send) :
@@ -100,27 +100,27 @@ namespace osmium {
                     m_segments.erase(sbegin, send);
                 }
 
-                void add_segment_end(const NodeRefSegment& segment) {
-                    m_segments.push_back(segment);
-                }
-
-                void add_segment_start(const NodeRefSegment& segment) {
+                void add_segment_front(const NodeRefSegment& segment) {
                     m_segments.insert(m_segments.begin(), segment);
                 }
 
-                const NodeRefSegment& first_segment() const {
+                void add_segment_back(const NodeRefSegment& segment) {
+                    m_segments.push_back(segment);
+                }
+
+                const NodeRefSegment& get_segment_front() const {
                     return m_segments.front();
                 }
 
-                NodeRefSegment& first_segment() {
+                NodeRefSegment& get_segment_front() {
                     return m_segments.front();
                 }
 
-                const NodeRefSegment& last_segment() const {
+                const NodeRefSegment& get_segment_back() const {
                     return m_segments.back();
                 }
 
-                NodeRefSegment& last_segment() {
+                NodeRefSegment& get_segment_back() {
                     return m_segments.back();
                 }
 
@@ -250,7 +250,7 @@ namespace osmium {
                     }
                 }
 
-                bool contains(const osmium::area::NodeRefSegment& segment) const {
+                bool contains(const NodeRefSegment& segment) const {
                     for (auto& s : m_segments) {
                         if (s == segment || (s.first() == segment.second() && s.second() == segment.first())) {
                             return true;

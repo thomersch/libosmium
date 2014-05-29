@@ -3,7 +3,7 @@
 
 /*
 
-This file is part of Osmium (http://osmcode.org/osmium).
+This file is part of Osmium (http://osmcode.org/libosmium).
 
 Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
 
@@ -131,7 +131,7 @@ namespace osmium {
                 m_member_offsets.erase(
                     std::remove(m_member_offsets.begin(), m_member_offsets.end(), -1),
                     m_member_offsets.end()
-                    );
+                );
             }
 
             /**
@@ -140,7 +140,7 @@ namespace osmium {
             bool has_all_members() const {
                 return m_need_members == 0;
             }
-        
+
         }; // class RelationMeta
 
         /**

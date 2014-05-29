@@ -3,9 +3,9 @@
 
 /*
 
-This file is part of Osmium (http://osmcode.org/osmium).
+This file is part of Osmium (http://osmcode.org/libosmium).
 
-Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
+Copyright 2014 Jochen Topf <jochen@topf.org> and others (see README).
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -60,22 +60,36 @@ namespace osmium {
          * The actual assembling of the areas is done by the assembler
          * class given as template argument.
          *
-         * @tparam TAssembler MultiPolygon Assembler class.
+         * @tparam TAssembler Multipolygon Assembler class.
          */
         template <class TAssembler>
         class Collector : public osmium::relations::Collector<osmium::area::Collector<TAssembler>, false, true, false> {
 
             typedef typename osmium::relations::Collector<osmium::area::Collector<TAssembler>, false, true, false> collector_type;
 
-            TAssembler& m_assembler;
+            typedef typename TAssembler::config_type assembler_config_type;
+            const assembler_config_type m_assembler_config;
 
             osmium::memory::Buffer m_output_buffer;
 
+            void flush_output_buffer() {
+                if (this->callback()) {
+                    this->callback()(m_output_buffer);
+                    m_output_buffer.clear();
+                }
+            }
+
+            void possibly_flush_output_buffer() {
+                if (m_output_buffer.committed() > 1024*100) {
+                    flush_output_buffer();
+                }
+            }
+
         public:
 
-            Collector(TAssembler& assembler) :
+            Collector(const assembler_config_type& assembler_config) :
                 collector_type(),
-                m_assembler(assembler),
+                m_assembler_config(assembler_config),
                 m_output_buffer(1024*1024, true) {
             }
 
@@ -83,7 +97,7 @@ namespace osmium {
              * We are interested in all relations tagged with type=multipolygon or
              * type=boundary.
              *
-             * Overwritten from the osmium::relations::Collector class.
+             * Overwritten from the base class.
              */
             bool keep_relation(const osmium::Relation& relation) const {
                 const char* type = relation.tags().get_value_by_key("type");
@@ -101,34 +115,38 @@ namespace osmium {
             }
 
             /**
-             * We are only interested in members of type way.
-             *
-             * Overwritten from the osmium::relations::Collector class.
+             * Overwritten from the base class.
              */
             bool keep_member(const osmium::relations::RelationMeta& /*relation_meta*/, const osmium::RelationMember& member) const {
+                // We are only interested in members of type way.
                 return member.type() == osmium::item_type::way;
             }
 
             /**
              * This is called when a way is not in any multipolygon
              * relation.
-             * If the way is closed and has enough nodes it might be
-             * an area in its own right, so we copy it to the output
-             * buffer and change its type to area.
+             *
+             * Overwritten from the base class.
              */
             void way_not_in_any_relation(const osmium::Way& way) {
-                if (way.ends_have_same_location() && way.nodes().size() > 3) { // way is closed and has enough nodes, build simple multipolygon
-                    m_assembler(way, m_output_buffer);
+                if (way.ends_have_same_location() && way.nodes().size() > 3) {
+                    // way is closed and has enough nodes, build simple multipolygon
+                    TAssembler assembler(m_assembler_config);
+                    assembler(way, m_output_buffer);
+                    possibly_flush_output_buffer();
                 }
             }
 
             void complete_relation(osmium::relations::RelationMeta& relation_meta) {
                 relation_meta.remove_empty_members();
                 const osmium::Relation& relation = this->get_relation(relation_meta);
-                m_assembler(relation, relation_meta.member_offsets(), this->buffer(), m_output_buffer);
+                TAssembler assembler(m_assembler_config);
+                assembler(relation, relation_meta.member_offsets(), this->members_buffer(), m_output_buffer);
+                possibly_flush_output_buffer();
             }
 
             void done() {
+                flush_output_buffer();
                 collector_type::clean_assembled_relations();
                 if (! collector_type::relations().empty()) {
                     std::cerr << "Warning! Some member ways missing for these multipolygon relations:";

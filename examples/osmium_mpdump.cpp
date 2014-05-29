@@ -45,9 +45,8 @@ int main(int argc, char* argv[]) {
 
     osmium::io::File infile(argv[1]);
 
-    typedef osmium::area::Assembler area_assembler_type;
-    area_assembler_type assembler;
-    osmium::area::Collector<area_assembler_type> collector(assembler);
+    osmium::area::Assembler::config_type assembler_config;
+    osmium::area::Collector<osmium::area::Assembler> collector(assembler_config);
 
     std::cout << "Pass 1...\n";
     osmium::io::Reader reader1(infile, osmium::osm_entity::flags::relation);
@@ -67,13 +66,13 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Pass 2...\n";
     osmium::io::Reader reader2(infile);
-    osmium::apply(reader2, location_handler, collector.handler());
+    osmium::apply(reader2, location_handler, collector.handler([&dump](const osmium::memory::Buffer& buffer) {
+        osmium::apply(buffer, dump);
+    }));
     std::cout << "Pass 2 done\n";
 
     std::cout << "Memory:\n";
     collector.used_memory();
-
-    osmium::apply(collector, dump);
 
     google::protobuf::ShutdownProtobufLibrary();
 }

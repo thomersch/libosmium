@@ -3,9 +3,9 @@
 
 /*
 
-This file is part of Osmium (http://osmcode.org/osmium).
+This file is part of Osmium (http://osmcode.org/libosmium).
 
-Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
+Copyright 2014 Jochen Topf <jochen@topf.org> and others (see README).
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -37,7 +37,8 @@ DEALINGS IN THE SOFTWARE.
 #include <cassert>
 #include <vector>
 
-#include <osmium/area/segment.hpp>
+#include <osmium/area/problem_reporter.hpp>
+#include <osmium/area/detail/node_ref_segment.hpp>
 #include <osmium/memory/buffer.hpp>
 #include <osmium/osm/relation.hpp>
 #include <osmium/osm/way.hpp>
@@ -55,14 +56,16 @@ namespace osmium {
             class SegmentList {
 
                 typedef std::vector<NodeRefSegment> slist_type;
-                
+
                 slist_type m_segments {};
 
-                bool m_debug { false };
- 
+                bool m_debug;
+
             public:
 
-                SegmentList() = default;
+                SegmentList(bool debug) :
+                    m_debug(debug) {
+                }
 
                 ~SegmentList() = default;
 
@@ -121,7 +124,7 @@ namespace osmium {
                     osmium::NodeRef last_nr;
                     for (const osmium::NodeRef& nr : way.nodes()) {
                         if (last_nr.location() && last_nr.location() != nr.location()) {
-                            m_segments.emplace_back(NodeRefSegment(last_nr, nr, role, &way));
+                            m_segments.emplace_back(last_nr, nr, role, &way);
                         }
                         last_nr = nr;
                     }
@@ -157,6 +160,49 @@ namespace osmium {
                         }
                         m_segments.erase(it, it+2);
                     }
+                }
+
+                /**
+                 * Find intersection between segments.
+                 *
+                 * @param object_id ID of the (way or multipolygon relation) object we are trying to build.
+                 * @param problem_reporter Any intersections found are reported to this object.
+                 * @returns true if there are intersections.
+                 */
+                bool find_intersections(osmium::area::ProblemReporter* problem_reporter) const {
+                    if (m_segments.empty()) {
+                        return false;
+                    }
+
+                    bool found_intersections = false;
+
+                    for (auto it1 = m_segments.begin(); it1 != m_segments.end()-1; ++it1) {
+                        const NodeRefSegment& s1 = *it1;
+                        for (auto it2 = it1+1; it2 != m_segments.end(); ++it2) {
+                            const NodeRefSegment& s2 = *it2;
+
+                            assert(s1 != s2); // erase_duplicate_segments() should have made sure of that
+
+                            if (outside_x_range(s2, s1)) {
+                                break;
+                            }
+
+                            if (y_range_overlap(s1, s2)) {
+                                osmium::Location intersection = calculate_intersection(s1, s2);
+                                if (intersection) {
+                                    found_intersections = true;
+                                    if (m_debug) {
+                                        std::cerr << "  segments " << s1 << " and " << s2 << " intersecting at " << intersection << "\n";
+                                    }
+                                    if (problem_reporter) {
+                                        problem_reporter->report_intersection(s1.way()->id(), s1.first().location(), s1.second().location(), s2.way()->id(), s2.first().location(), s2.second().location(), intersection);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return found_intersections;
                 }
 
             }; // class SegmentList
