@@ -138,11 +138,38 @@ namespace osmium {
             }
 
             void complete_relation(osmium::relations::RelationMeta& relation_meta) {
-                relation_meta.remove_empty_members();
                 const osmium::Relation& relation = this->get_relation(relation_meta);
+                std::vector<size_t> offsets;
+                for (const auto& member : relation.members()) {
+                    if (member.ref() != 0) {
+                        offsets.push_back(this->get_offset(member.type(), member.ref()));
+                    }
+                }
                 TAssembler assembler(m_assembler_config);
-                assembler(relation, relation_meta.member_offsets(), this->members_buffer(), m_output_buffer);
+                assembler(relation, offsets, this->members_buffer(), m_output_buffer);
                 possibly_flush_output_buffer();
+
+                // clear member metas
+                for (const auto& member : relation.members()) {
+                    if (member.ref() != 0) {
+                        auto& mmv = this->member_meta(member.type());
+                        auto range = std::equal_range(mmv.begin(), mmv.end(), osmium::relations::MemberMeta(member.ref()));
+                        assert(range.first != range.second);
+
+                        // if this is the last time this object was needed
+                        // the mark it as deleted
+                        if (range.first + 1 == range.second) {
+                            this->get_member(range.first->buffer_offset()).deleted(true);
+                        }
+
+                        for (auto it = range.first; it != range.second; ++it) {
+                            if (relation.id() == this->get_relation(it->relation_pos()).id()) {
+                                mmv.erase(it);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
             void done() {
