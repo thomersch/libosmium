@@ -37,15 +37,16 @@ DEALINGS IN THE SOFTWARE.
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <vector>
 
 #include <osmium/osm/item_type.hpp>
 #include <osmium/osm/object.hpp>
+#include <osmium/osm/types.hpp>
 #include <osmium/handler.hpp>
 #include <osmium/memory/buffer.hpp>
-#include <osmium/osm/relation.hpp>
 #include <osmium/visitor.hpp>
 
 #include <osmium/relations/detail/relation_meta.hpp>
@@ -55,9 +56,11 @@ namespace osmium {
 
     class Node;
     class Way;
+    class Relation;
+    class RelationMember;
 
     /**
-     * @brief Namespace for code related to OSM relations
+     * @brief Code related to the assembly of OSM relations
      */
     namespace relations {
 
@@ -348,7 +351,7 @@ namespace osmium {
                 m_relations.erase(
                     std::remove_if(m_relations.begin(), m_relations.end(), has_all_members()),
                     m_relations.end()
-                    );
+                );
             }
 
             const osmium::Relation& get_relation(size_t offset) const {
@@ -396,7 +399,7 @@ namespace osmium {
                     m_relations_buffer.rollback();
                 } else {
                     m_relations_buffer.commit();
-                    m_relations.emplace_back(relation_meta);
+                    m_relations.push_back(std::move(relation_meta));
 //                    std::cerr << "added relation id=" << relation.id() << "\n";
                 }
             }

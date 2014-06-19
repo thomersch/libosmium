@@ -1,11 +1,11 @@
-#ifndef OSMIUM_TAGS_KEY_FILTER_HPP
-#define OSMIUM_TAGS_KEY_FILTER_HPP
+#ifndef OSMIUM_TAGS_REGEX_FILTER_HPP
+#define OSMIUM_TAGS_REGEX_FILTER_HPP
 
 /*
 
 This file is part of Osmium (http://osmcode.org/libosmium).
 
-Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
+Copyright 2014 Jochen Topf <jochen@topf.org> and others (see README).
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -33,60 +33,26 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <functional>
-#include <vector>
+#include <regex>
+#include <string>
 
-#include <boost/iterator/filter_iterator.hpp>
-
-#include <osmium/osm/tag.hpp>
+#include <osmium/tags/filter.hpp>
 
 namespace osmium {
 
     namespace tags {
 
-        class KeyFilter : public std::unary_function<const osmium::Tag&, bool> {
-
-            struct Rule {
-                std::string key;
-                bool result;
-
-                Rule(bool r, const char* k) :
-                    key(k),
-                    result(r) {
-                }
-
-            };
-
-            std::vector<Rule> m_rules;
-            bool m_default_result;
-
-        public:
-
-            typedef boost::filter_iterator<KeyFilter, osmium::TagList::const_iterator> iterator;
-
-            KeyFilter(bool default_result) :
-                m_rules(),
-                m_default_result(default_result) {
+        template <>
+        struct match_value<std::regex> {
+            bool operator()(const std::regex& rule_value, const char* tag_value) {
+                return std::regex_match(tag_value, rule_value);
             }
+        };
 
-            KeyFilter& add(bool result, const char* key) {
-                m_rules.emplace_back(result, key);
-                return *this;
-            }
-
-            bool operator()(const osmium::Tag& tag) const {
-                for (const Rule& rule : m_rules) {
-                    if (tag.key() == rule.key) {
-                        return rule.result;
-                    }
-                }
-                return m_default_result;
-            }
-
-        }; // class KeyFilter
+        typedef Filter<std::string, std::regex> RegexFilter;
 
     } // namespace tags
 
 } // namespace osmium
 
-#endif // OSMIUM_TAGS_KEY_FILTER_HPP
+#endif // OSMIUM_TAGS_REGEX_FILTER_HPP

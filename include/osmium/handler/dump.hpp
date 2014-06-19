@@ -1,5 +1,5 @@
-#ifndef OSMIUM_OSM_DUMP_HPP
-#define OSMIUM_OSM_DUMP_HPP
+#ifndef OSMIUM_HANDLER_DUMP_HPP
+#define OSMIUM_HANDLER_DUMP_HPP
 
 /*
 
@@ -43,6 +43,7 @@ DEALINGS IN THE SOFTWARE.
 #include <osmium/osm/changeset.hpp>
 #include <osmium/osm/location.hpp>
 #include <osmium/osm/node.hpp>
+#include <osmium/osm/node_ref.hpp>
 #include <osmium/osm/object.hpp>
 #include <osmium/osm/ostream.hpp>
 #include <osmium/osm/relation.hpp>
@@ -50,12 +51,13 @@ DEALINGS IN THE SOFTWARE.
 #include <osmium/osm/timestamp.hpp>
 #include <osmium/osm/way.hpp>
 #include <osmium/visitor.hpp>
+#include <osmium/handler.hpp>
 
 namespace osmium {
 
-    namespace osm {
+    namespace handler {
 
-        class Dump {
+        class Dump : public osmium::handler::Handler {
 
             std::ostream& m_out;
             bool m_with_size;
@@ -139,7 +141,7 @@ namespace osmium {
                 m_prefix(prefix) {
             }
 
-            void operator()(const osmium::TagList& tags) {
+            void tag_list(const osmium::TagList& tags) {
                 print_title("TAGS", tags);
                 for (const auto& tag : tags) {
                     m_out << m_prefix
@@ -152,7 +154,7 @@ namespace osmium {
                 }
             }
 
-            void operator()(const osmium::WayNodeList& wnl) {
+            void way_node_list(const osmium::WayNodeList& wnl) {
                 print_title("NODES", wnl);
                 for (const auto& node_ref : wnl) {
                     m_out << m_prefix
@@ -166,7 +168,7 @@ namespace osmium {
                 }
             }
 
-            void operator()(const osmium::RelationMemberList& rml) {
+            void relation_member_list(const osmium::RelationMemberList& rml) {
                 print_title("MEMBERS", rml);
                 for (const auto& member : rml) {
                     m_out << m_prefix
@@ -184,7 +186,7 @@ namespace osmium {
                 }
             }
 
-            void operator()(const osmium::OuterRing& ring) {
+            void outer_ring(const osmium::OuterRing& ring) {
                 print_title("OUTER RING", ring);
                 for (const auto& node_ref : ring) {
                     m_out << m_prefix
@@ -198,7 +200,7 @@ namespace osmium {
                 }
             }
 
-            void operator()(const osmium::InnerRing& ring) {
+            void inner_ring(const osmium::InnerRing& ring) {
                 print_title("INNER RING", ring);
                 for (const auto& node_ref : ring) {
                     m_out << m_prefix
@@ -212,28 +214,28 @@ namespace osmium {
                 }
             }
 
-            void operator()(const osmium::Node& node) {
+            void node(const osmium::Node& node) {
                 print_title("NODE", node);
                 print_meta(node);
                 print_location(node);
             }
 
-            void operator()(const osmium::Way& way) {
+            void way(const osmium::Way& way) {
                 print_title("WAY", way);
                 print_meta(way);
             }
 
-            void operator()(const osmium::Relation& relation) {
+            void relation(const osmium::Relation& relation) {
                 print_title("RELATION", relation);
                 print_meta(relation);
             }
 
-            void operator()(const osmium::Area& area) {
+            void area(const osmium::Area& area) {
                 print_title("AREA", area);
                 print_meta(area);
             }
 
-            void operator()(const osmium::Changeset& changeset) {
+            void changeset(const osmium::Changeset& changeset) {
                 print_title("CHANGESET", changeset);
                 m_out << m_prefix
                       << "  id="
@@ -266,8 +268,8 @@ namespace osmium {
 
         }; // class Dump
 
-    } // namespace osm
+    } // namespace handler
 
 } // namespace osmium
 
-#endif // OSMIUM_OSM_DUMP_HPP
+#endif // OSMIUM_HANDLER_DUMP_HPP

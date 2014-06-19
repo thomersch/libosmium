@@ -49,13 +49,17 @@ DEALINGS IN THE SOFTWARE.
 
 namespace osmium {
 
-    namespace memory {
+    namespace builder {
         template <class T> class ObjectBuilder;
     }
 
+    /**
+     * An OSM Changeset is of a group of changes made by a single user over a
+     * short period of time.
+     */
     class Changeset : public osmium::OSMEntity, boost::totally_ordered<Changeset> {
 
-        friend class osmium::memory::ObjectBuilder<osmium::Changeset>;
+        friend class osmium::builder::ObjectBuilder<osmium::Changeset>;
 
         osmium::Timestamp m_created_at {};
         osmium::Timestamp m_closed_at {};
@@ -299,7 +303,9 @@ namespace osmium {
             return cend();
         }
 
-    }; // Changeset
+    }; // class Changeset
+
+    static_assert(sizeof(Changeset) % osmium::memory::align_bytes == 0, "Class osmium::Changeset has wrong size to be aligned properly!");
 
     /**
      * Changesets are equal if their IDs are equal.

@@ -5,7 +5,7 @@
 
 This file is part of Osmium (http://osmcode.org/libosmium).
 
-Copyright 2013 Jochen Topf <jochen@topf.org> and others (see README).
+Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -49,6 +49,7 @@ DEALINGS IN THE SOFTWARE.
 #include <string>
 #include <thread>
 
+#include <osmium/builder/osm_object_builder.hpp>
 #include <osmium/io/detail/input_format.hpp>
 #include <osmium/io/detail/pbf.hpp> // IWYU pragma: export
 #include <osmium/io/detail/zlib.hpp>
@@ -57,8 +58,7 @@ DEALINGS IN THE SOFTWARE.
 #include <osmium/memory/buffer.hpp>
 #include <osmium/osm.hpp>
 #include <osmium/osm/box.hpp>
-#include <osmium/osm/builder.hpp>
-#include <osmium/osm/entity_flags.hpp>
+#include <osmium/osm/entity_bits.hpp>
 #include <osmium/osm/location.hpp>
 #include <osmium/osm/object.hpp>
 #include <osmium/osm/timestamp.hpp>
@@ -87,7 +87,7 @@ namespace osmium {
                 int64_t m_date_factor;
                 int32_t m_granularity;
 
-                osmium::osm_entity::flags m_read_types;
+                osmium::osm_entity_bits::type m_read_types;
 
                 osmium::memory::Buffer m_buffer;
 
@@ -99,7 +99,7 @@ namespace osmium {
 
             public:
 
-                PBFPrimitiveBlockParser(const void* data, const size_t size, osmium::osm_entity::flags read_types) :
+                PBFPrimitiveBlockParser(const void* data, const size_t size, osmium::osm_entity_bits::type read_types) :
                     m_data(data),
                     m_size(size),
                     m_stringtable(nullptr),
@@ -129,13 +129,13 @@ namespace osmium {
                         const OSMPBF::PrimitiveGroup& group = pbf_primitive_block.primitivegroup(i);
 
                         if (group.has_dense())  {
-                            if (m_read_types & osmium::osm_entity::flags::node) parse_dense_node_group(group);
+                            if (m_read_types & osmium::osm_entity_bits::node) parse_dense_node_group(group);
                         } else if (group.ways_size() != 0) {
-                            if (m_read_types & osmium::osm_entity::flags::way) parse_way_group(group);
+                            if (m_read_types & osmium::osm_entity_bits::way) parse_way_group(group);
                         } else if (group.relations_size() != 0) {
-                            if (m_read_types & osmium::osm_entity::flags::relation) parse_relation_group(group);
+                            if (m_read_types & osmium::osm_entity_bits::relation) parse_relation_group(group);
                         } else if (group.nodes_size() != 0) {
-                            if (m_read_types & osmium::osm_entity::flags::node) parse_node_group(group);
+                            if (m_read_types & osmium::osm_entity_bits::node) parse_node_group(group);
                         } else {
                             throw std::runtime_error("Group of unknown type.");
                         }
@@ -168,7 +168,7 @@ namespace osmium {
 
                 void parse_node_group(const OSMPBF::PrimitiveGroup& group) {
                     for (int i=0; i < group.nodes_size(); ++i) {
-                        osmium::osm::NodeBuilder builder(m_buffer);
+                        osmium::builder::NodeBuilder builder(m_buffer);
                         const OSMPBF::Node& pbf_node = group.nodes(i);
                         parse_attributes(builder, pbf_node);
 
@@ -179,7 +179,7 @@ namespace osmium {
                         }
 
                         if (pbf_node.keys_size() > 0) {
-                            osmium::osm::TagListBuilder tl_builder(m_buffer, &builder);
+                            osmium::builder::TagListBuilder tl_builder(m_buffer, &builder);
                             for (int tag=0; tag < pbf_node.keys_size(); ++tag) {
                                 tl_builder.add_tag(m_stringtable->s(pbf_node.keys(tag)).data(),
                                                    m_stringtable->s(pbf_node.vals(tag)).data());
@@ -192,12 +192,12 @@ namespace osmium {
 
                 void parse_way_group(const OSMPBF::PrimitiveGroup& group) {
                     for (int i=0; i < group.ways_size(); ++i) {
-                        osmium::osm::WayBuilder builder(m_buffer);
+                        osmium::builder::WayBuilder builder(m_buffer);
                         const OSMPBF::Way& pbf_way = group.ways(i);
                         parse_attributes(builder, pbf_way);
 
                         if (pbf_way.refs_size() > 0) {
-                            osmium::osm::WayNodeListBuilder wnl_builder(m_buffer, &builder);
+                            osmium::builder::WayNodeListBuilder wnl_builder(m_buffer, &builder);
                             uint64_t ref = 0;
                             for (int i=0; i < pbf_way.refs_size(); ++i) {
                                 ref += pbf_way.refs(i);
@@ -206,7 +206,7 @@ namespace osmium {
                         }
 
                         if (pbf_way.keys_size() > 0) {
-                            osmium::osm::TagListBuilder tl_builder(m_buffer, &builder);
+                            osmium::builder::TagListBuilder tl_builder(m_buffer, &builder);
                             for (int tag=0; tag < pbf_way.keys_size(); ++tag) {
                                 tl_builder.add_tag(m_stringtable->s(pbf_way.keys(tag)).data(),
                                                    m_stringtable->s(pbf_way.vals(tag)).data());
@@ -219,12 +219,12 @@ namespace osmium {
 
                 void parse_relation_group(const OSMPBF::PrimitiveGroup& group) {
                     for (int i=0; i < group.relations_size(); ++i) {
-                        osmium::osm::RelationBuilder builder(m_buffer);
+                        osmium::builder::RelationBuilder builder(m_buffer);
                         const OSMPBF::Relation& pbf_relation = group.relations(i);
                         parse_attributes(builder, pbf_relation);
 
                         if (pbf_relation.types_size() > 0) {
-                            osmium::osm::RelationMemberListBuilder rml_builder(m_buffer, &builder);
+                            osmium::builder::RelationMemberListBuilder rml_builder(m_buffer, &builder);
                             uint64_t ref = 0;
                             for (int i=0; i < pbf_relation.types_size(); ++i) {
                                 ref += pbf_relation.memids(i);
@@ -233,7 +233,7 @@ namespace osmium {
                         }
 
                         if (pbf_relation.keys_size() > 0) {
-                            osmium::osm::TagListBuilder tl_builder(m_buffer, &builder);
+                            osmium::builder::TagListBuilder tl_builder(m_buffer, &builder);
                             for (int tag=0; tag < pbf_relation.keys_size(); ++tag) {
                                 tl_builder.add_tag(m_stringtable->s(pbf_relation.keys(tag)).data(),
                                                    m_stringtable->s(pbf_relation.vals(tag)).data());
@@ -244,7 +244,7 @@ namespace osmium {
                     }
                 }
 
-                int add_tags(const OSMPBF::DenseNodes& dense, int n, osmium::osm::NodeBuilder* builder) {
+                int add_tags(const OSMPBF::DenseNodes& dense, int n, osmium::builder::NodeBuilder* builder) {
                     if (n >= dense.keys_vals_size()) {
                         return n;
                     }
@@ -253,7 +253,7 @@ namespace osmium {
                         return n+1;
                     }
 
-                    osmium::osm::TagListBuilder tl_builder(m_buffer, builder);
+                    osmium::builder::TagListBuilder tl_builder(m_buffer, builder);
 
                     while (n < dense.keys_vals_size()) {
                         int tag_key_pos = dense.keys_vals(n++);
@@ -304,7 +304,7 @@ namespace osmium {
                             assert(last_dense_user_sid >= 0);
                         }
 
-                        osmium::osm::NodeBuilder builder(m_buffer);
+                        osmium::builder::NodeBuilder builder(m_buffer);
                         osmium::Node& node = builder.object();
 
                         node.id(last_dense_id);
@@ -503,7 +503,7 @@ namespace osmium {
 
             class DataBlobParser : public BlobParser<DataBlobParser> {
 
-                osmium::osm_entity::flags m_read_types;
+                osmium::osm_entity_bits::type m_read_types;
 
                 osmium::memory::Buffer handle_blob(const std::string& data) {
                     PBFPrimitiveBlockParser parser(data.data(), data.size(), m_read_types);
@@ -514,7 +514,7 @@ namespace osmium {
 
                 friend class BlobParser;
 
-                DataBlobParser(const int size, const int blob_num, InputQueueReader& input_queue_reader, osmium::osm_entity::flags read_types) :
+                DataBlobParser(const int size, const int blob_num, InputQueueReader& input_queue_reader, osmium::osm_entity_bits::type read_types) :
                     BlobParser(size, blob_num, input_queue_reader),
                     m_read_types(read_types) {
                 }
@@ -571,7 +571,7 @@ namespace osmium {
                     return m_blob_header.datasize();
                 }
 
-                void parse_osm_data(osmium::osm_entity::flags read_types) {
+                void parse_osm_data(osmium::osm_entity_bits::type read_types) {
                     osmium::thread::set_thread_name("_osmium_pbf_in");
                     int n=0;
                     while (size_t size = read_blob_header("OSMData")) {
@@ -608,9 +608,11 @@ namespace osmium {
                 /**
                  * Instantiate PBF Parser
                  *
-                 * @param file osmium::io::File instance.
+                 * @param file osmium::io::File instance describing file to be read from.
+                 * @param read_which_entities Which types of OSM entities (nodes, ways, relations, changesets) should be parsed?
+                 * @param input_queue String queue where data is read from.
                  */
-                PBFInputFormat(const osmium::io::File& file, osmium::osm_entity::flags read_which_entities, osmium::thread::Queue<std::string>& input_queue) :
+                PBFInputFormat(const osmium::io::File& file, osmium::osm_entity_bits::type read_which_entities, osmium::thread::Queue<std::string>& input_queue) :
                     osmium::io::detail::InputFormat(file, read_which_entities, input_queue),
                     m_use_thread_pool(true),
                     m_queue(),
@@ -641,7 +643,7 @@ namespace osmium {
                         header_blob_parser.doit();
                     }
 
-                    if (m_read_which_entities != osmium::osm_entity::flags::nothing) {
+                    if (m_read_which_entities != osmium::osm_entity_bits::nothing) {
                         m_reader = std::thread(&PBFInputFormat::parse_osm_data, this, m_read_which_entities);
                     }
                 }
@@ -666,7 +668,7 @@ namespace osmium {
             namespace {
 
                 const bool registered_pbf_input = osmium::io::detail::InputFormatFactory::instance().register_input_format(osmium::io::file_format::pbf,
-                    [](const osmium::io::File& file, osmium::osm_entity::flags read_which_entities, osmium::thread::Queue<std::string>& input_queue) {
+                    [](const osmium::io::File& file, osmium::osm_entity_bits::type read_which_entities, osmium::thread::Queue<std::string>& input_queue) {
                         return new osmium::io::detail::PBFInputFormat(file, read_which_entities, input_queue);
                 });
 

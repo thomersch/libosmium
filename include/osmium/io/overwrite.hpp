@@ -1,11 +1,11 @@
-#ifndef OSMIUM_OSM_NODE_HPP
-#define OSMIUM_OSM_NODE_HPP
+#ifndef OSMIUM_IO_OVERWRITE_HPP
+#define OSMIUM_IO_OVERWRITE_HPP
 
 /*
 
 This file is part of Osmium (http://osmcode.org/libosmium).
 
-Copyright 2013,2014 Jochen Topf <jochen@topf.org> and others (see README).
+Copyright 2014 Jochen Topf <jochen@topf.org> and others (see README).
 
 Boost Software License - Version 1.0 - August 17th, 2003
 
@@ -33,60 +33,20 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <osmium/memory/item.hpp>
-#include <osmium/osm/item_type.hpp>
-#include <osmium/osm/location.hpp>
-#include <osmium/osm/object.hpp>
-
 namespace osmium {
 
-    namespace builder {
-        template <class T> class ObjectBuilder;
-    }
+    namespace io {
 
-    class Node : public Object {
+        /**
+         * Allow overwriting of existing file.
+         */
+        enum class overwrite : bool {
+            no    = false,
+            allow = true
+        };
 
-        friend class osmium::builder::ObjectBuilder<osmium::Node>;
-
-        osmium::Location m_location {};
-
-        Node() :
-            Object(sizeof(Node), osmium::item_type::node) {
-        }
-
-    public:
-
-        static constexpr osmium::item_type itemtype = osmium::item_type::node;
-
-        const osmium::Location location() const {
-            return m_location;
-        }
-
-        Node& location(const osmium::Location& location) {
-            m_location = location;
-            return *this;
-        }
-
-        void lon(double x) {
-            m_location.lon(x);
-        }
-
-        void lat(double y) {
-            m_location.lat(y);
-        }
-
-        double lon() const {
-            return m_location.lon();
-        }
-
-        double lat() const {
-            return m_location.lat();
-        }
-
-    }; // class Node
-
-    static_assert(sizeof(Node) % osmium::memory::align_bytes == 0, "Class osmium::Node has wrong size to be aligned properly!");
+    } // namespace io
 
 } // namespace osmium
 
-#endif // OSMIUM_OSM_NODE_HPP
+#endif // OSMIUM_IO_OVERWRITE_HPP

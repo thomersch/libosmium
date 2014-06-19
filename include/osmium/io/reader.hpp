@@ -53,7 +53,7 @@ DEALINGS IN THE SOFTWARE.
 #include <osmium/io/file.hpp>
 #include <osmium/io/header.hpp>
 #include <osmium/memory/buffer.hpp>
-#include <osmium/osm/entity_flags.hpp>
+#include <osmium/osm/entity_bits.hpp>
 #include <osmium/thread/checked_task.hpp>
 #include <osmium/thread/name.hpp>
 #include <osmium/thread/queue.hpp>
@@ -116,7 +116,7 @@ namespace osmium {
         class Reader {
 
             osmium::io::File m_file;
-            osmium::osm_entity::flags m_read_which_entities;
+            osmium::osm_entity_bits::type m_read_which_entities;
 
             std::unique_ptr<osmium::io::detail::InputFormat> m_input;
             osmium::thread::Queue<std::string> m_input_queue {};
@@ -161,7 +161,11 @@ namespace osmium {
 
                     ::open("/dev/null", O_RDONLY); // stdin
                     ::open("/dev/null", O_WRONLY); // stderr
-                    if (::execlp(command.c_str(), command.c_str(), filename.c_str(), nullptr) < 0) {
+                    // hack: -g switches off globbing in curl which allows [] to be used in file names
+                    // this is important for XAPI URLs
+                    // in theory this execute() function could be used for other commands, but it is
+                    // only used for curl at the moment, so this is okay.
+                    if (::execlp(command.c_str(), command.c_str(), "-g", filename.c_str(), nullptr) < 0) {
                         exit(1);
                     }
                 }
@@ -199,7 +203,7 @@ namespace osmium {
              *                            significantly if objects that are not needed anyway are not
              *                            parsed.
              */
-            explicit Reader(const osmium::io::File& file, osmium::osm_entity::flags read_which_entities = osmium::osm_entity::flags::all) :
+            explicit Reader(const osmium::io::File& file, osmium::osm_entity_bits::type read_which_entities = osmium::osm_entity_bits::all) :
                 m_file(file),
                 m_read_which_entities(read_which_entities),
                 m_input(osmium::io::detail::InputFormatFactory::instance().create_input(m_file, m_read_which_entities, m_input_queue)),
@@ -208,11 +212,11 @@ namespace osmium {
                 m_input->open();
             }
 
-            explicit Reader(const std::string& filename, osmium::osm_entity::flags read_types = osmium::osm_entity::flags::all) :
+            explicit Reader(const std::string& filename, osmium::osm_entity_bits::type read_types = osmium::osm_entity_bits::all) :
                 Reader(osmium::io::File(filename), read_types) {
             }
 
-            explicit Reader(const char* filename, osmium::osm_entity::flags read_types = osmium::osm_entity::flags::all) :
+            explicit Reader(const char* filename, osmium::osm_entity_bits::type read_types = osmium::osm_entity_bits::all) :
                 Reader(osmium::io::File(filename), read_types) {
             }
 
@@ -271,7 +275,7 @@ namespace osmium {
                 // it in this (the main) thread.
                 m_input_task.check_for_exception();
 
-                if (m_read_which_entities == osmium::osm_entity::flags::nothing) {
+                if (m_read_which_entities == osmium::osm_entity_bits::nothing) {
                     // If the caller didn't want anything but the header, it will
                     // always get an empty buffer here.
                     return osmium::memory::Buffer();

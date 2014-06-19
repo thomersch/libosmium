@@ -11,17 +11,16 @@
 
 #include <getopt.h>
 
-#include <osmium/io/any_input.hpp>
-
+#include <osmium/area/assembler.hpp>
+#include <osmium/area/multipolygon_collector.hpp>
+#include <osmium/dynamic_handler.hpp>
+#include <osmium/geom/wkt.hpp>
+#include <osmium/handler/dump.hpp>
+#include <osmium/handler/node_locations_for_ways.hpp>
 #include <osmium/index/map/dummy.hpp>
 #include <osmium/index/map/sparse_table.hpp>
-#include <osmium/handler/node_locations_for_ways.hpp>
-#include <osmium/dynamic_handler.hpp>
-#include <osmium/area/collector.hpp>
-#include <osmium/area/assembler.hpp>
+#include <osmium/io/any_input.hpp>
 #include <osmium/visitor.hpp>
-#include <osmium/osm/dump.hpp>
-#include <osmium/geom/wkt.hpp>
 
 typedef osmium::index::map::Dummy<osmium::unsigned_object_id_type, osmium::Location> index_neg_type;
 typedef osmium::index::map::SparseTable<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
@@ -29,7 +28,7 @@ typedef osmium::handler::NodeLocationsForWays<index_pos_type, index_neg_type> lo
 
 class WKTDump : public osmium::handler::Handler {
 
-    osmium::geom::WKTFactory m_factory{};
+    osmium::geom::WKTFactory m_factory {};
 
     std::ostream& m_out;
 
@@ -82,7 +81,7 @@ int main(int argc, char* argv[]) {
                 handler.set<WKTDump>(std::cout);
                 break;
             case 'o':
-                handler.set<osmium::osm::Dump>(std::cout);
+                handler.set<osmium::handler::Dump>(std::cout);
                 break;
             default:
                 exit(1);
@@ -98,10 +97,10 @@ int main(int argc, char* argv[]) {
     osmium::io::File infile(argv[optind]);
 
     osmium::area::Assembler::config_type assembler_config;
-    osmium::area::Collector<osmium::area::Assembler> collector(assembler_config);
+    osmium::area::MultipolygonCollector<osmium::area::Assembler> collector(assembler_config);
 
     std::cout << "Pass 1...\n";
-    osmium::io::Reader reader1(infile, osmium::osm_entity::flags::relation);
+    osmium::io::Reader reader1(infile, osmium::osm_entity_bits::relation);
     collector.read_relations(reader1);
     std::cout << "Pass 1 done\n";
 

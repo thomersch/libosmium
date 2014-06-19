@@ -33,68 +33,57 @@ DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <cassert>
-#include <cstddef>
-#include <cstdlib>
+#include <utility>
 
 #include <osmium/memory/collection.hpp>
 #include <osmium/memory/item.hpp>
 #include <osmium/osm/item_type.hpp>
-#include <osmium/osm/location.hpp>
 #include <osmium/osm/object.hpp>
 #include <osmium/osm/types.hpp>
-#include <osmium/osm/way.hpp>
-#include <osmium/osm/noderef.hpp>
+#include <osmium/osm/node_ref_list.hpp>
 
 namespace osmium {
 
-    namespace memory {
+    namespace builder {
         template <class T> class ObjectBuilder;
     }
 
-    class OuterRing : public osmium::memory::Collection<NodeRef, osmium::item_type::outer_ring> {
+    /**
+     * An outer ring of an Area.
+     */
+    class OuterRing : public NodeRefList<osmium::item_type::outer_ring> {
 
     public:
 
         OuterRing():
-            osmium::memory::Collection<NodeRef, osmium::item_type::outer_ring>() {
-        }
-
-        size_t size() const noexcept {
-            assert((byte_size() - sizeof(OuterRing)) % sizeof(NodeRef) == 0);
-            return (byte_size() - sizeof(OuterRing)) / sizeof(NodeRef);
-        }
-
-        const NodeRef& operator[](size_t n) const {
-            const NodeRef* node_ref = &*begin();
-            return node_ref[n];
+            NodeRefList<osmium::item_type::outer_ring>() {
         }
 
     }; // class OuterRing
 
-    class InnerRing : public osmium::memory::Collection<NodeRef, osmium::item_type::inner_ring> {
+    static_assert(sizeof(OuterRing) % osmium::memory::align_bytes == 0, "Class osmium::OuterRing has wrong size to be aligned properly!");
+
+    /**
+     * An inner ring of an Area.
+     */
+    class InnerRing : public NodeRefList<osmium::item_type::inner_ring> {
 
     public:
 
         InnerRing():
-            osmium::memory::Collection<NodeRef, osmium::item_type::inner_ring>() {
-        }
-
-        size_t size() const noexcept {
-            assert((byte_size() - sizeof(InnerRing)) % sizeof(NodeRef) == 0);
-            return (byte_size() - sizeof(InnerRing)) / sizeof(NodeRef);
-        }
-
-        const NodeRef& operator[](size_t n) const {
-            const NodeRef* node_ref = &*begin();
-            return node_ref[n];
+            NodeRefList<osmium::item_type::inner_ring>() {
         }
 
     }; // class InnerRing
 
+    static_assert(sizeof(InnerRing) % osmium::memory::align_bytes == 0, "Class osmium::InnerRing has wrong size to be aligned properly!");
+
+    /**
+     * An OSM area created out of a closed way or a multipolygon relation.
+     */
     class Area : public Object {
 
-        friend class osmium::memory::ObjectBuilder<osmium::Area>;
+        friend class osmium::builder::ObjectBuilder<osmium::Area>;
 
         Area() :
             Object(sizeof(Area), osmium::item_type::area) {

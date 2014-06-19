@@ -15,7 +15,7 @@ ifeq ($(OS),Darwin)
 	LDFLAGS += -stdlib=libc++
 endif
 
-INCLUDE_FILES := $(shell find include -name \*.hpp | sort)
+INCLUDE_FILES := $(shell find include/osmium -name \*.hpp | sort)
 
 WARNINGFLAGS := -Wall -Wextra -pedantic -Wredundant-decls -Wdisabled-optimization -Wctor-dtor-privacy -Wnon-virtual-dtor -Woverloaded-virtual -Wsign-promo -Winline -Wold-style-cast
 #WARNINGFLAGS += -Weffc++
@@ -45,7 +45,8 @@ all:
 .PHONY: clean install check test indent
 
 clean:
-	rm -fr check-includes doc/html test/tests
+	rm -fr check-includes doc/html doc/xml doc/classes.txt test/tests tests/test_*.o
+	$(MAKE) -C test/osm-testdata clean
 
 check:
 	cppcheck --std=c++11 $(CPPCHECK_OPTIONS) -I include $(INCLUDE_FILES) */*.cpp test/t/*/test_*.cpp test/osm-testdata/*.cpp
@@ -82,6 +83,7 @@ check-includes: $(INCLUDE_FILES)
 
 test:
 	(cd test && ./run_tests.sh)
+	$(MAKE) -C test/osm-testdata test
 
 iwyu:
 	for FILE in $(INCLUDE_FILES); do \
@@ -97,10 +99,13 @@ indent:
 	astyle --style=java --indent-namespaces --indent-switches --pad-header --lineend=linux --suffix=none --recursive include/\*.hpp examples/\*.cpp test/\*.cpp
 #	astyle --style=java --indent-namespaces --indent-switches --pad-header --unpad-paren --align-pointer=type --lineend=linux --suffix=none --recursive include/\*.hpp examples/\*.cpp test/\*.cpp
 
-doc: doc/html/files.html
-	doxygen doc/Doxyfile >/dev/null
+doc: doc/html/files.html doc/classes.txt
 
 doc/html/files.html: $(INCLUDE_FILES) doc/Doxyfile doc/doc.txt doc/osmium.css
+	doxygen doc/Doxyfile >/dev/null
+
+doc/classes.txt: doc/xml/classosmium_1_1*
+	xmlstarlet sel -t -i "/doxygen/compounddef/@prot='public'" -v "/doxygen/compounddef/compoundname/text()" -n doc/xml/classosmium_1_1* >$@
 
 install-doc: doc
 	install -m 755 -g $(INSTALL_GROUP) -o $(INSTALL_USER) -d $(DESTDIR)/usr/share/doc/libosmium-dev

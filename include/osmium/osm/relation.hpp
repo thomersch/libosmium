@@ -40,24 +40,20 @@ DEALINGS IN THE SOFTWARE.
 
 #include <osmium/memory/collection.hpp>
 #include <osmium/memory/item.hpp>
-#include <osmium/osm/entity.hpp>
 #include <osmium/osm/item_type.hpp>
 #include <osmium/osm/object.hpp>
 #include <osmium/osm/types.hpp>
 
 namespace osmium {
 
-    namespace memory {
+    namespace builder {
         template <class T> class ObjectBuilder;
-    }
-
-    namespace osm {
         class RelationMemberListBuilder;
     }
 
     class RelationMember : public osmium::memory::detail::ItemHelper {
 
-        friend class osmium::osm::RelationMemberListBuilder;
+        friend class osmium::builder::RelationMemberListBuilder;
 
         object_id_type   m_ref;
         item_type        m_type;
@@ -160,10 +156,11 @@ namespace osmium {
 
     }; // class RelationMemberList
 
+    static_assert(sizeof(RelationMemberList) % osmium::memory::align_bytes == 0, "Class osmium::RelationMemberList has wrong size to be aligned properly!");
 
     class Relation : public Object {
 
-        friend class osmium::memory::ObjectBuilder<osmium::Relation>;
+        friend class osmium::builder::ObjectBuilder<osmium::Relation>;
 
         Relation() :
             Object(sizeof(Relation), osmium::item_type::relation) {

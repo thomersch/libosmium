@@ -34,7 +34,6 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include <stdexcept>
-#include <type_traits>
 
 #include <osmium/diff_iterator.hpp>
 #include <osmium/io/input_iterator.hpp>
@@ -44,109 +43,62 @@ DEALINGS IN THE SOFTWARE.
 
 namespace osmium {
 
-    class Object;
+    namespace {
 
-    namespace diff_handler {
-        class DiffHandler;
-    }
-
-    namespace diff_visitor {
-
-        namespace detail {
-
-            template <class TVisitor, typename std::enable_if<!std::is_base_of<osmium::diff_handler::DiffHandler, TVisitor>::value, int>::type = 0>
-            inline void switch_on_type(TVisitor& visitor, const osmium::DiffObject& diff) {
-                switch (diff.type()) {
-                    case osmium::item_type::node:
-                        visitor(static_cast<const osmium::DiffNode&>(diff));
-                        break;
-                    case osmium::item_type::way:
-                        visitor(static_cast<const osmium::DiffWay&>(diff));
-                        break;
-                    case osmium::item_type::relation:
-                        visitor(static_cast<const osmium::DiffRelation&>(diff));
-                        break;
-                    default:
-                        throw std::runtime_error("unknown type");
-                }
+        template <class THandler>
+        inline void apply_diff_iterator_recurse(const osmium::DiffObject& diff, THandler& handler) {
+            switch (diff.type()) {
+                case osmium::item_type::node:
+                    handler.node(static_cast<const osmium::DiffNode&>(diff));
+                    break;
+                case osmium::item_type::way:
+                    handler.way(static_cast<const osmium::DiffWay&>(diff));
+                    break;
+                case osmium::item_type::relation:
+                    handler.relation(static_cast<const osmium::DiffRelation&>(diff));
+                    break;
+                default:
+                    throw std::runtime_error("unknown type");
             }
+        }
 
-            template <class TVisitor, typename std::enable_if<std::is_base_of<osmium::diff_handler::DiffHandler, TVisitor>::value, int>::type = 0>
-            inline void switch_on_type(TVisitor& visitor, const osmium::DiffObject& diff) {
-                switch (diff.type()) {
-                    case osmium::item_type::node:
-                        visitor.node(static_cast<const osmium::DiffNode&>(diff));
-                        break;
-                    case osmium::item_type::way:
-                        visitor.way(static_cast<const osmium::DiffWay&>(diff));
-                        break;
-                    case osmium::item_type::relation:
-                        visitor.relation(static_cast<const osmium::DiffRelation&>(diff));
-                        break;
-                    default:
-                        throw std::runtime_error("unknown type");
-                }
-            }
+        template <class THandler, class ...TRest>
+        inline void apply_diff_iterator_recurse(const osmium::DiffObject& diff, THandler& handler, TRest&... more) {
+            apply_diff_iterator_recurse(diff, handler);
+            apply_diff_iterator_recurse(diff, more...);
+        }
 
-            template <class TVisitor>
-            inline void apply_diff_iterator_recurse(const osmium::DiffObject& diff, TVisitor& visitor) {
-                switch_on_type(visitor, diff);
-            }
+    } // anonymous namespace
 
-            template <class TVisitor, class ...TRest>
-            inline void apply_diff_iterator_recurse(const osmium::DiffObject& diff, TVisitor& visitor, TRest&... more) {
-                apply_diff_iterator_recurse(diff, visitor);
-                apply_diff_iterator_recurse(diff, more...);
-            }
-
-            template <class TVisitor, typename std::enable_if<!std::is_base_of<osmium::diff_handler::DiffHandler, TVisitor>::value, int>::type = 0>
-            inline void done_recurse(TVisitor&) {
-            }
-
-            template <class TVisitor, typename std::enable_if<std::is_base_of<osmium::diff_handler::DiffHandler, TVisitor>::value, int>::type = 0>
-            inline void done_recurse(TVisitor& visitor) {
-                visitor.done();
-            }
-
-            template <class TVisitor, class ...TRest>
-            inline void done_recurse(TVisitor& visitor, TRest&... more) {
-                done_recurse(visitor);
-                done_recurse(more...);
-            }
-
-        } // namespace detail
-
-    } // namespace diff_visitor
-
-    template <class TIterator, class ...TVisitors>
-    inline void apply_diff(TIterator it, TIterator end, TVisitors&... visitors) {
+    template <class TIterator, class ...THandlers>
+    inline void apply_diff(TIterator it, TIterator end, THandlers&... handlers) {
         typedef osmium::DiffIterator<TIterator> diff_iterator;
 
         diff_iterator dit(it, end);
         diff_iterator dend(end, end);
 
         for (; dit != dend; ++dit) {
-            osmium::diff_visitor::detail::apply_diff_iterator_recurse(*dit, visitors...);
+            apply_diff_iterator_recurse(*dit, handlers...);
         }
-
-        osmium::diff_visitor::detail::done_recurse(visitors...);
     }
 
-    template <class TSource, class ...TVisitors>
-    inline void apply_diff(TSource& source, TVisitors&... visitors) {
+    class Object;
+
+    template <class TSource, class ...THandlers>
+    inline void apply_diff(TSource& source, THandlers&... handlers) {
         apply_diff(osmium::io::InputIterator<TSource, osmium::Object> {source},
                    osmium::io::InputIterator<TSource, osmium::Object> {},
-                   visitors...);
+                   handlers...);
     }
 
-    template <class ...TVisitors>
-    inline void apply_diff(osmium::memory::Buffer& buffer, TVisitors&... visitors) {
-        apply_diff(buffer.begin(), buffer.end(), visitors...);
+    template <class ...THandlers>
+    inline void apply_diff(osmium::memory::Buffer& buffer, THandlers&... handlers) {
+        apply_diff(buffer.begin(), buffer.end(), handlers...);
     }
 
-    template <class ...TVisitors>
-    inline void apply_diff(const osmium::memory::Buffer& buffer, TVisitors&... visitors) {
-        apply_diff(buffer.cbegin(), buffer.cend(), visitors...);
+    template <class ...THandlers>
+    inline void apply_diff(const osmium::memory::Buffer& buffer, THandlers&... handlers) {
+        apply_diff(buffer.cbegin(), buffer.cend(), handlers...);
     }
 
 } // namespace osmium

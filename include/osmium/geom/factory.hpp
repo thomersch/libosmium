@@ -42,13 +42,13 @@ DEALINGS IN THE SOFTWARE.
 #include <osmium/osm/item_type.hpp>
 #include <osmium/osm/location.hpp>
 #include <osmium/osm/node.hpp>
-#include <osmium/osm/noderef.hpp>
+#include <osmium/osm/node_ref.hpp>
 #include <osmium/osm/way.hpp>
 
 namespace osmium {
 
     /**
-     * @brief Namespace for everything related to geometry.
+     * @brief Everything related to geometry handling.
      */
     namespace geom {
 
